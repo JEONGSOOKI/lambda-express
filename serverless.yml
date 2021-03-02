@@ -1,0 +1,42 @@
+service: lambda-express
+
+frameworkVersion: '2'
+
+custom:
+  stage: ${self:provider.stage} # 현재 스테이지 별로 데이터베이스 접속 정보를 달리하기 위함
+  database: ${file(./config/database.js):database}
+  security: ${file(./config/security.js):security}
+  awskey: ${file(./config/awskey.js):awskey}
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  memorySize: 512
+  timeout: 30
+  apiName: express # apigateway에 등록되는 api이름
+  stage: ${opt:stage, 'dev'} # api내에서 배포되는 스테이지 이름
+  region: # your region
+  # 실행 역할 arn(미리 작성해둔 역할) - lambda함수의 권한 등 설정
+  role: arn:aws:iam::(your account):role/(role name)
+  environment: # 환경변수들
+    # aws
+    accessKey: ${self:custom.awskey.${self:custom.stage}.access_key}
+    secreyKey: ${self:custom.awskey.${self:custom.stage}.secret_key}
+    # dbconnect
+    dbhost: ${self:custom.database.${self:custom.stage}.db_host}
+    dbuser: ${self:custom.database.${self:custom.stage}.db_user}
+    dbpw: ${self:custom.database.${self:custom.stage}.db_password}
+    dbname: ${self:custom.database.${self:custom.stage}.db_name}
+    # security
+    jwtKey: ${self:custom.security.${self:custom.stage}.jwt_key}
+    length: ${self:custom.security.${self:custom.stage}.length}
+    shaKey: ${self:custom.security.${self:custom.stage}.sha_key}
+    time: ${self:custom.security.${self:custom.stage}.time}
+
+functions:
+  proxy:
+    handler: app.handler
+    name: LambdaExpress
+    events:
+      - http: 'ANY {proxy+}'
+  
